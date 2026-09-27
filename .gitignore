@@ -1,0 +1,7 @@
+# Ignore heavy AppImages in the dotfiles repo
+appimages/*.AppImage
+*.AppImage
+*.iso
+*.chd
+*.bin
+!kernel/edid/crt_15khz_multi.bin

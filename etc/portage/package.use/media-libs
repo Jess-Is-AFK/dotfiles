@@ -1,0 +1,3 @@
+media-libs/*
+media-libs/libsdl2 pipewire
+media-libs/mesa vulkan wayland zink X

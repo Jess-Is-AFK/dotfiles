@@ -1,0 +1,9 @@
+# --- Dual-GPU (RDNA 3 + GCN 1.0) & 15kHz CRT Kernel Snippet ---
+CONFIG_DRM_AMDGPU=y
+CONFIG_DRM_AMDGPU_SI=y
+CONFIG_DRM_AMDGPU_CIK=y
+CONFIG_FW_LOADER=y
+CONFIG_EXTRA_FIRMWARE="edid/crt-15khz_multi.bin"
+CONFIG_EXTRA_FIRMWARE_DIR="/lib/firmware"
+# Append to GRUB_CMDLINE_LINUX_DEFAULT:
+# radeon.si_support=0 amdgpu.si_support=1 drm.edid_firmware=VGA-1:edid/crt-15khz_multi.bin video=VGA-1:2560x240@60eS

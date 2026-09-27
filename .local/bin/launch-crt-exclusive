@@ -1,0 +1,108 @@
+#!/usr/bin/env bash
+set -e
+
+MODE="240p"
+USE_GAMESCOPE=false
+CMD=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -r|--resolution)
+            MODE="$2"
+            shift 2
+            ;;
+        -g|--gamescope)
+            USE_GAMESCOPE=true
+            shift
+            ;;
+        -o|--)
+            shift
+            CMD=("$@")
+            break
+            ;;
+        *)
+            CMD+=("$1")
+            shift
+            ;;
+    esac
+done
+
+if [ ${#CMD[@]} -eq 0 ]; then
+    echo "Usage: launch-crt-exclusive [-r 240p|480i|224p] [-g] -o <command...>"
+    exit 1
+fi
+
+if [[ -f "${CMD[0]}" && ! -x "${CMD[0]}" ]]; then
+    chmod +x "${CMD[0]}" 2>/dev/null || true
+fi
+
+# Clean environment
+export QT_QPA_PLATFORM=xcb
+export QT_QPA_PLATFORMTHEME=generic
+export QT_STYLE_OVERRIDE=Fusion
+unset QT_PLUGIN_PATH
+unset VK_ICD_FILENAMES
+export ENABLE_GAMESCOPE_WSI=0
+
+case "$MODE" in
+    240p)
+        GS_W=640; GS_H=480; OUT_W=2560; OUT_H=240
+        # Omit fractional Hz so Sway matches the exact EDID mode
+        swaymsg "output VGA-1 enable mode 2560x240" 2>/dev/null || true
+        swaymsg "focus output VGA-1" 2>/dev/null || true
+        ;;
+    224p)
+        GS_W=640; GS_H=448; OUT_W=2560; OUT_H=224
+        swaymsg "output VGA-1 enable mode 2560x224" 2>/dev/null || true
+        swaymsg "focus output VGA-1" 2>/dev/null || true
+        ;;
+    480i)
+        GS_W=640; GS_H=480; OUT_W=2560; OUT_H=480
+        echo "📺 Handing off VGA-1 to direct KMS for 480i..."
+
+        # 1. Release the CRTC from Sway
+        swaymsg "output VGA-1 disable"
+
+        # 2. Always restore Sway desktop on exit/interrupt
+        trap 'swaymsg "output VGA-1 enable mode 2560x240"' EXIT INT TERM
+
+        # 3. Direct DRM/KMS execution
+        if [ "$USE_GAMESCOPE" = true ]; then
+            echo "🎮 Launching Gamescope in direct DRM/KMS mode..."
+            # Unset Wayland display so Gamescope claims the raw KMS connector directly
+            WAYLAND_DISPLAY="" DISPLAY="" gamescope \
+              --backend drm \
+              -w "$GS_W" -h "$GS_H" \
+              -W "$OUT_W" -H "$OUT_H" \
+              -S stretch \
+              -F nearest \
+              -r 60 \
+              -- "${CMD[@]}"
+            exit 0
+        else
+            echo "🚀 Launching direct KMS command..."
+            "${CMD[@]}"
+            exit 0
+        fi
+        ;;
+    *)
+        echo "❌ Unknown mode '$MODE'. Supported: 240p, 480i, 224p"
+        exit 1
+        ;;
+esac
+
+# Progressive launcher inside Sway
+if [ "$USE_GAMESCOPE" = true ]; then
+    echo "🎮 Launching via Gamescope (stretched to $OUT_W x $OUT_H on VGA-1)..."
+    exec gamescope \
+      -w "$GS_W" -h "$GS_H" \
+      -W "$OUT_W" -H "$OUT_H" \
+      -S stretch \
+      -F nearest \
+      -r 60 \
+      -f \
+      -- "${CMD[@]}"
+else
+    echo "🚀 Launching direct command..."
+    exec "${CMD[@]}"
+fi

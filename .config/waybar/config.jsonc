@@ -1,0 +1,74 @@
+{
+    "layer": "top",
+    "position": "top",
+    "height": 34,
+    "spacing": 8,
+    // Strictly target the two desktop displays — NEVER VGA-1
+    "output": ["DP-2", "DP-3"],
+
+    "modules-left": [
+        "sway/workspaces",
+        "sway/mode",
+        "sway/window"
+    ],
+    "modules-center": [
+        "clock"
+    ],
+    "modules-right": [
+        "mpris",
+        "cpu",
+        "memory",
+        "wireplumber",
+        "tray"
+    ],
+
+    "sway/workspaces": {
+        "disable-scroll": true,
+        "all-outputs": false,
+        "format": "{name}"
+    },
+
+    "sway/window": {
+        "max-length": 45,
+        "separate-outputs": true
+    },
+
+    "clock": {
+        "format": "󰥔  {:%a %b %d  %I:%M %p}",
+        "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>"
+    },
+
+    "cpu": {
+        "format": "  {usage}%",
+        "interval": 2
+    },
+
+    "memory": {
+        "format": "󰍛  {percentage}%",
+        "interval": 5
+    },
+
+    "wireplumber": {
+        "format": "{icon}  {volume}%",
+        "format-muted": "󰝟  Muted",
+        "on-click": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "format-icons": ["󰕿", "󰖀", "󰕾"]
+    },
+
+    "mpris": {
+        "format": "{player_icon}  {dynamic}",
+        "format-paused": "{status_icon} <i>{dynamic}</i>",
+        "max-length": 30,
+        "player-icons": {
+            "default": "󰎈",
+            "spotify": "󰓇"
+        },
+        "status-icons": {
+            "paused": "󰏤"
+        }
+    },
+
+    "tray": {
+        "spacing": 10
+    }
+}

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Plays 4:3 video across the full 2560x240 super-resolution canvas
+exec mpv \
+  --app-id=mpv-crt \
+  --fs \
+  --video-aspect-override=32:3 \
+  --scale=nearest \
+  "$@"

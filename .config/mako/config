@@ -1,0 +1,11 @@
+font=monospace 11
+background-color=#1a1b26fa
+text-color=#c0caf5
+border-color=#7aa2f7
+border-size=2
+border-radius=8
+padding=14
+margin=16
+default-timeout=5000
+width=360
+height=120

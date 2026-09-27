@@ -1,0 +1,200 @@
+# ===========================================================================
+# Sway Configuration — Workstation Halcyon (Daily Driver)
+# ===========================================================================
+
+set $mod Mod4
+set $term foot
+set $menu fuzzel
+
+font pango:monospace 10
+
+# Aesthetics & Gaps
+default_border pixel 2
+default_floating_border pixel 2
+gaps inner 5
+gaps outer 0
+
+# Tokyo Night Theme Colors
+# class                 border  backgr. text    indicator child_border
+client.focused          #7aa2f7 #1a1b26 #c0caf5 #7dcfff   #7aa2f7
+client.focused_inactive #24283b #1a1b26 #565f89 #24283b   #24283b
+client.unfocused        #1a1b26 #1a1b26 #565f89 #1a1b26   #1a1b26
+client.urgent           #f7768e #f7768e #ffffff #f7768e   #f7768e
+
+# ---------------------------------------------------------------------------
+# Mouse & Drag Controls
+# ---------------------------------------------------------------------------
+# Hold $mod and Left-Click to drag floating windows; Right-Click to resize
+floating_modifier $mod normal
+
+# Allow dragging and re-ordering tiled windows with $mod + Left-Click
+tiling_drag enable
+tiling_drag_threshold 10
+
+# ---------------------------------------------------------------------------
+# 1. Output & Display Geometry
+# ---------------------------------------------------------------------------
+# Left: Olympus OEV-203 15kHz CRT (Black background for phosphor protection)
+output VGA-1 pos 0 0 mode 2560x240@60.01Hz bg #000000 solid_color
+
+# Center: Primary 1440p @ 165Hz
+output DP-2 pos 2560 0 res 2560x1440@165Hz
+
+# Right: Secondary 1440p @ 165Hz
+output DP-3 pos 5120 0 res 2560x1440@165Hz
+
+# ---------------------------------------------------------------------------
+# 2. Workspace Output Pinning
+# ---------------------------------------------------------------------------
+workspace 1 output DP-2
+workspace 2 output DP-2
+workspace 3 output DP-2
+workspace 4 output DP-2
+
+workspace 5 output DP-3
+workspace 6 output DP-3
+workspace 7 output DP-3
+workspace 8 output DP-3
+
+workspace 9 output VGA-1
+workspace 10 output VGA-1
+
+# ---------------------------------------------------------------------------
+# 3. Autostart Services (OpenRC)
+# ---------------------------------------------------------------------------
+exec dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP=sway 2>/dev/null || true
+exec_always --no-startup-id pkill -0 pipewire 2>/dev/null || (pipewire & pipewire-pulse & wireplumber &)
+exec_always pkill mako; mako
+
+# ---------------------------------------------------------------------------
+# 4. Primary Launchers & Keybindings
+# ---------------------------------------------------------------------------
+# $mod+Space for Fuzzel Application Launcher
+bindsym $mod+space  exec $menu
+bindsym $mod+d      exec $menu
+
+bindsym $mod+Return exec $term
+bindsym $mod+Shift+q kill
+
+bindsym $mod+Shift+c reload
+bindsym $mod+Shift+e exec swaynag -t warning -m 'Exit Sway?' -B 'Yes' 'swaymsg exit'
+
+# ---------------------------------------------------------------------------
+# 5. Audio & Media Controls (WirePlumber + playerctl)
+# ---------------------------------------------------------------------------
+bindsym --locked XF86AudioRaiseVolume exec wpctl set-volume -l 1.5 @DEFAULT_AUDIO_SINK@ 5%+
+bindsym --locked XF86AudioLowerVolume exec wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-
+bindsym --locked XF86AudioMute        exec wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle
+bindsym --locked XF86AudioMicMute     exec wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle
+
+bindsym --locked XF86AudioPlay exec playerctl play-pause
+bindsym --locked XF86AudioNext exec playerctl next
+bindsym --locked XF86AudioPrev exec playerctl previous
+bindsym --locked XF86AudioStop exec playerctl stop
+
+# ---------------------------------------------------------------------------
+# 6. Screenshots (grim + slurp)
+# ---------------------------------------------------------------------------
+bindsym Print exec mkdir -p ~/Pictures/Screenshots && \
+    grim -g "$(slurp)" ~/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && \
+    wl-copy < $(ls -t ~/Pictures/Screenshots/*.png | head -n 1)
+
+bindsym Shift+Print exec mkdir -p ~/Pictures/Screenshots && \
+    grim ~/Pictures/Screenshots/$(date +'%Y-%m-%d_%H-%M-%S').png && \
+    wl-copy < $(ls -t ~/Pictures/Screenshots/*.png | head -n 1)
+
+# ---------------------------------------------------------------------------
+# 7. Window Routing & CRT Rules
+# ---------------------------------------------------------------------------
+for_window [app_id="(?i)gamescope"]    move to output VGA-1, fullscreen enable
+for_window [class="(?i)gamescope"]     move to output VGA-1, fullscreen enable
+for_window [title="(?i)gamescope"]     move to output VGA-1, fullscreen enable
+for_window [app_id="(?i)mpv-crt"]       move to output VGA-1, fullscreen enable
+for_window [app_id="(?i)retroarch"]     move to output VGA-1, fullscreen enable
+for_window [app_id="(?i)duckstation.*"] move to output VGA-1, fullscreen enable
+for_window [class="(?i)duckstation.*"]  move to output VGA-1, fullscreen enable
+
+for_window [window_role="pop-up"] floating enable
+for_window [window_role="bubble"] floating enable
+for_window [window_role="dialog"] floating enable
+for_window [window_type="dialog"] floating enable
+
+for_window [shell=".*"] inhibit_idle fullscreen
+
+# ---------------------------------------------------------------------------
+# 8. Navigation & Scratchpad
+# ---------------------------------------------------------------------------
+bindsym $mod+h focus left
+bindsym $mod+j focus down
+bindsym $mod+k focus up
+bindsym $mod+l focus right
+bindsym $mod+Left focus left
+bindsym $mod+Down focus down
+bindsym $mod+Up focus up
+bindsym $mod+Right focus right
+
+bindsym $mod+Shift+h move left
+bindsym $mod+Shift+j move down
+bindsym $mod+Shift+k move up
+bindsym $mod+Shift+l move right
+bindsym $mod+Shift+Left move left
+bindsym $mod+Shift+Down move down
+bindsym $mod+Shift+Up move up
+bindsym $mod+Shift+Right move right
+
+# Layout modes
+bindsym $mod+b splith
+bindsym $mod+v splitv
+bindsym $mod+s layout stacking
+bindsym $mod+w layout tabbed
+bindsym $mod+e layout toggle split
+bindsym $mod+f fullscreen toggle
+bindsym $mod+Shift+space floating toggle
+
+# Scratchpad (quick dropdown window)
+bindsym $mod+Shift+minus move scratchpad
+bindsym $mod+minus       scratchpad show
+
+# Workspaces
+bindsym $mod+1 workspace number 1
+bindsym $mod+2 workspace number 2
+bindsym $mod+3 workspace number 3
+bindsym $mod+4 workspace number 4
+bindsym $mod+5 workspace number 5
+bindsym $mod+6 workspace number 6
+bindsym $mod+7 workspace number 7
+bindsym $mod+8 workspace number 8
+bindsym $mod+9 workspace number 9
+bindsym $mod+0 workspace number 10
+
+bindsym $mod+Shift+1 move container to workspace number 1
+bindsym $mod+Shift+2 move container to workspace number 2
+bindsym $mod+Shift+3 move container to workspace number 3
+bindsym $mod+Shift+4 move container to workspace number 4
+bindsym $mod+Shift+5 move container to workspace number 5
+bindsym $mod+Shift+6 move container to workspace number 6
+bindsym $mod+Shift+7 move container to workspace number 7
+bindsym $mod+Shift+8 move container to workspace number 8
+bindsym $mod+Shift+9 move container to workspace number 9
+bindsym $mod+Shift+0 move container to workspace number 10
+
+# ---------------------------------------------------------------------------
+# 9. Status Bar (Built-in Swaybar: ONLY on DP-2 and DP-3)
+# ---------------------------------------------------------------------------
+bar {
+    output DP-2
+    output DP-3
+    position top
+
+    status_command while date +'%a %b %d  %I:%M %p'; do sleep 1; done
+
+    colors {
+        statusline #c0caf5
+        background #1a1b26
+        separator  #565f89
+        focused_workspace  #7aa2f7 #7aa2f7 #1a1b26
+        active_workspace   #24283b #24283b #c0caf5
+        inactive_workspace #1a1b26 #1a1b26 #565f89
+        urgent_workspace   #f7768e #f7768e #ffffff
+    }
+}

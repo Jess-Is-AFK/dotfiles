@@ -1,0 +1,2 @@
+net-libs/*
+net-libs/ngtcp2 gnutls
