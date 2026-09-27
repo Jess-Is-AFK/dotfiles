@@ -39,3 +39,10 @@ A reproducible Gentoo Linux configuration for driving dual modern high-refresh f
    ```bash
    start-sway
    ```
+
+## Current Hardware Pipeline
+hardware pipeline and current status:
+GPU 1 (Primary Desktop): AMD Radeon RX 7900 XT (card1) $\rightarrow$ 1440p high-refresh displays.
+GPU 2 (CRT Output): AMD Radeon R5 430 / Oland (card0) $\rightarrow$ VGA-1 $\rightarrow$ VGA2SCART $\rightarrow$ Olympus OEV-203 (15kHz RGB).
+Kernel Parameters: drm.edid_firmware configuration.
+Current State: 240p/224p/288p progressive modes work within Sway; 480i interlaced mode is in the kernel EDID table, but wlroots filters interlaced modes at the compositor level, requiring direct KMS handoff / DRM leasing.
