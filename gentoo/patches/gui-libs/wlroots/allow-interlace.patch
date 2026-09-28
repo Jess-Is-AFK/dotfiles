@@ -1,0 +1,11 @@
+--- a/backend/drm/drm.c	2026-09-27 04:32:33.521272937 -0500
++++ b/backend/drm/drm.c	2026-09-27 04:32:33.521272937 -0500
+@@ -1647,7 +1647,7 @@
+ 
+ 	bool found_current_mode = false;
+ 	for (int i = 0; i < drm_conn->count_modes; ++i) {
+-		if (drm_conn->modes[i].flags & DRM_MODE_FLAG_INTERLACE) {
++		if (0) {
+ 			continue;
+ 		}
+ 
