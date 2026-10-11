@@ -2,27 +2,88 @@
 set -e
 
 MODE="240p"
+USE_GAMESCOPE=false
 CMD=()
 CRT_CONNECTOR="VGA-1"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        -r|--resolution) MODE="$2"; shift 2 ;;
-        -o|--) shift; CMD=("$@"); break ;;
-        *) CMD+=("$1"); shift ;;
+        -r|--resolution)
+            MODE="$2"
+            shift 2
+            ;;
+        -g|--gamescope)
+            USE_GAMESCOPE=true
+            shift
+            ;;
+        -o|--)
+            shift
+            CMD=("$@")
+            break
+            ;;
+        *)
+            CMD+=("$1")
+            shift
+            ;;
     esac
 done
 
+if [ ${#CMD[@]} -eq 0 ]; then
+    echo "Usage: launch-crt-exclusive [-r 240p|480i|224p|288p] [-g] -o <command...>"
+    exit 1
+fi
+
+if [[ -f "${CMD[0]}" && ! -x "${CMD[0]}" ]]; then
+    chmod +x "${CMD[0]}" 2>/dev/null || true
+fi
+
+# Clean toolkit environment
+export QT_QPA_PLATFORM=xcb
+export QT_QPA_PLATFORMTHEME=generic
+export QT_STYLE_OVERRIDE=Fusion
+unset QT_PLUGIN_PATH
+unset VK_ICD_FILENAMES
+export ENABLE_GAMESCOPE_WSI=0
+
+# Restore 240p progressive desktop raster when the child process exits
+trap 'swaymsg "output '${CRT_CONNECTOR}' mode 2560x240" 2>/dev/null || true; swaymsg "focus output '${CRT_CONNECTOR}'" 2>/dev/null || true' EXIT INT TERM
+
 case "$MODE" in
-    240p) swaymsg "output ${CRT_CONNECTOR} mode 2560x240" ;;
-    224p) swaymsg "output ${CRT_CONNECTOR} mode 2560x224" ;;
-    288p) swaymsg "output ${CRT_CONNECTOR} mode 2560x288" ;;
+    240p)
+        GS_W=640; GS_H=480; OUT_W=2560; OUT_H=240; REFRESH=60
+        swaymsg "output ${CRT_CONNECTOR} mode 2560x240"
+        ;;
+    224p)
+        GS_W=640; GS_H=448; OUT_W=2560; OUT_H=224; REFRESH=60
+        swaymsg "output ${CRT_CONNECTOR} mode 2560x224"
+        ;;
+    288p)
+        GS_W=768; GS_H=576; OUT_W=2560; OUT_H=288; REFRESH=50
+        swaymsg "output ${CRT_CONNECTOR} mode 2560x288"
+        ;;
     480i)
-        trap 'swaymsg "output '${CRT_CONNECTOR}' mode 2560x240"' EXIT INT TERM
+        GS_W=640; GS_H=480; OUT_W=2560; OUT_H=480; REFRESH=60
         swaymsg "output ${CRT_CONNECTOR} mode 2560x480"
-        swaymsg "focus output ${CRT_CONNECTOR}"
+        ;;
+    *)
+        echo "❌ Unknown mode '$MODE'. Supported: 240p, 480i, 224p, 288p"
+        exit 1
         ;;
 esac
 
 swaymsg "focus output ${CRT_CONNECTOR}"
-exec "${CMD[@]}"
+
+if [ "$USE_GAMESCOPE" = true ]; then
+    echo "🎮 Launching via Gamescope (${OUT_W}x${OUT_H} on ${CRT_CONNECTOR})..."
+    exec gamescope \
+      -w "$GS_W" -h "$GS_H" \
+      -W "$OUT_W" -H "$OUT_H" \
+      -S stretch \
+      -F nearest \
+      -r "$REFRESH" \
+      -f \
+      -- "${CMD[@]}"
+else
+    echo "🚀 Launching direct command on ${CRT_CONNECTOR}..."
+    exec "${CMD[@]}"
+fi
