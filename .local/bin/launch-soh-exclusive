@@ -1,89 +1,48 @@
 #!/usr/bin/env bash
 set -e
 
-MODE="240p"
 CRT_CONNECTOR="VGA-1"
-SOH_BIN=""
+OUT_W=2560
+OUT_H=240
+REFRESH=60
+VIRTUAL_W=640
+VIRTUAL_H=480
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -r|--resolution)
-            MODE="$2"
-            shift 2
-            ;;
-        -b|--binary)
-            SOH_BIN="$2"
-            shift 2
-            ;;
-        *)
-            if [ -z "$SOH_BIN" ] && [ -f "$1" ]; then
-                SOH_BIN="$1"
-                shift
-            else
-                echo "❌ Unknown argument: $1"
-                exit 1
-            fi
-            ;;
-    esac
-done
+SOH_APPIMAGE="${1:-$HOME/appimages/SoH/soh.appimage}"
 
-# Auto-detect binary if not explicitly provided
-if [ -z "$SOH_BIN" ]; then
-    POSSIBLE_PATHS=(
-        "$HOME/Games/soh/soh.elf"
-        "$HOME/Games/soh/soh.appimage"
-        "$HOME/.local/share/soh/soh.elf"
-        "/usr/bin/soh.elf"
-        "/usr/bin/soh"
-	"$HOME/appimages/SoH/soh.appimage"
-    )
-    for path in "${POSSIBLE_PATHS[@]}"; do
-        if [ -f "$path" ]; then
-            SOH_BIN="$path"
-            break
-        fi
-    done
-fi
-
-if [ -z "$SOH_BIN" ] || [ ! -f "$SOH_BIN" ]; then
-    echo "Usage: launch-soh-exclusive [-r 240p|480i] [/path/to/soh.elf]"
+if [[ ! -f "$SOH_APPIMAGE" ]]; then
+    echo "Error: SoH AppImage not found at '$SOH_APPIMAGE'"
     exit 1
 fi
 
-chmod +x "$SOH_BIN" 2>/dev/null || true
+chmod +x "$SOH_APPIMAGE" 2>/dev/null || true
+SOH_DIR="$(dirname "$SOH_APPIMAGE")"
 
-# Revert Sway CRT output to baseline 2560x240 on exit
-trap 'swaymsg "output '${CRT_CONNECTOR}' mode 2560x240" 2>/dev/null || true; swaymsg "focus output '${CRT_CONNECTOR}'" 2>/dev/null || true' EXIT INT TERM
+# Runtime environment
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+export ENABLE_GAMESCOPE_WSI=0
+unset VK_ICD_FILENAMES
 
-case "$MODE" in
-    240p)
-        OUT_W=2560; OUT_H=240; REFRESH=60
-        swaymsg "output ${CRT_CONNECTOR} mode 2560x240"
-        ;;
-    480i)
-        OUT_W=2560; OUT_H=480; REFRESH=60
-        swaymsg "output ${CRT_CONNECTOR} mode 2560x480"
-        ;;
-    *)
-        echo "❌ Unknown mode '$MODE'. Supported: 240p, 480i"
-        exit 1
-        ;;
-esac
+# Constrain SDL2 to X11 inside Gamescope
+export SDL_VIDEODRIVER=x11
 
-swaymsg "focus output ${CRT_CONNECTOR}"
+# Always restore clean 240p desktop state upon exit
+trap 'swaymsg "output '${CRT_CONNECTOR}' mode 2560x240" 2>/dev/null || true' EXIT INT TERM
 
-echo "🗡️ Launching Ship of Harkinian ($MODE) stretched across ${OUT_W}x${OUT_H} on ${CRT_CONNECTOR}..."
+# Ensure VGA-1 is set to 2560x240 and focused
+swaymsg "output ${CRT_CONNECTOR} enable mode 2560x240" 2>/dev/null || true
+swaymsg "focus output ${CRT_CONNECTOR}" 2>/dev/null || true
 
-# 1. -w 640 -h 480: Presents a standard 4:3 canvas to SoH and ImGui.
-# 2. -W $OUT_W -H $OUT_H -S stretch: Fills the 2560 horizontal line so the CRT compresses it to 4:3.
-# 3. SDL_VIDEODRIVER=x11: Sandboxes SDL within Xwayland so it cannot poll Sway's mode table.
-# 4. --force-grab-cursor: Traps mouse/cursor focus inside the game window.
+echo "🗡️ Launching Ship of Harkinian on ${CRT_CONNECTOR} (Stretching 640x480 -> 2560x240)..."
+
+cd "$SOH_DIR"
 exec gamescope \
-  -w 640 -h 480 \
+  -w "$VIRTUAL_W" -h "$VIRTUAL_H" \
   -W "$OUT_W" -H "$OUT_H" \
-  -S stretch \
-  -F nearest \
+  --scaler stretch \
+  --filter nearest \
   -r "$REFRESH" \
   --force-grab-cursor \
   -f \
-  -- env SDL_VIDEODRIVER=x11 "$SOH_BIN"
+  -- "$SOH_APPIMAGE"
