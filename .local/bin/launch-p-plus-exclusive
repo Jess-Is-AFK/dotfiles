@@ -26,12 +26,10 @@ done
 
 case "$MODE" in
     480i)
-        OUT_W=2560
-        OUT_H=480
+        OUT_W=2560; OUT_H=480
         ;;
     240p)
-        OUT_W=2560
-        OUT_H=240
+        OUT_W=2560; OUT_H=240
         ;;
     *)
         echo "❌ Unknown mode '$MODE'. Use '480i' or '240p'."
@@ -39,7 +37,7 @@ case "$MODE" in
         ;;
 esac
 
-# Locate Project+ binary or AppImage
+# Locate Project+ AppImage or binary
 PPLUS_BIN="$1"
 if [[ -z "$PPLUS_BIN" ]]; then
     if [[ -x "$HOME/appimages/Project-Plus/Project-Plus.AppImage" ]]; then
@@ -48,8 +46,6 @@ if [[ -z "$PPLUS_BIN" ]]; then
         PPLUS_BIN="$HOME/Games/Project+/Project-Plus.AppImage"
     elif [[ -x "$HOME/appimages/Project+/Project-Plus.AppImage" ]]; then
         PPLUS_BIN="$HOME/appimages/Project+/Project-Plus.AppImage"
-    elif command -v dolphin-emu &>/dev/null; then
-        PPLUS_BIN="$(command -v dolphin-emu)"
     else
         PPLUS_BIN=$(find "$HOME" -maxdepth 4 -type f -name "*Project*Plus*.AppImage" -perm -111 2>/dev/null | head -n1 || true)
     fi
@@ -62,20 +58,26 @@ fi
 
 shift $(( $# > 0 ? 1 : 0 )) 2>/dev/null || true
 EXTRA_ARGS=("$@")
-
 PPLUS_DIR="$(dirname "$PPLUS_BIN")"
 
-# Define and create persistent user profile directory
-# If a local "User" directory exists next to the AppImage (portable mode), use that;
-# otherwise default to ~/.config/dolphin-emu-project-plus to prevent clashing with standard Dolphin.
-if [[ -d "${PPLUS_DIR}/User" ]]; then
-    PPLUS_USER_DIR="${PPLUS_DIR}/User"
-else
-    PPLUS_USER_DIR="${HOME}/.config/dolphin-emu-project-plus"
-    mkdir -p "$PPLUS_USER_DIR"
+# Persistent user profile directory
+PPLUS_USER_DIR="${HOME}/.config/dolphin-emu-project-plus"
+mkdir -p "$PPLUS_USER_DIR"
+
+# Auto-seed User directory from AppImage if Launcher is missing
+if [[ ! -d "${PPLUS_USER_DIR}/Launcher" ]]; then
+    echo "📦 Initializing persistent Project+ User directory from AppImage..."
+    TMP_EXTRACT=$(mktemp -d /tmp/pplus-init-XXXXXX)
+    "$PPLUS_BIN" --appimage-extract >/dev/null 2>&1 || true
+    SRC_USER=$(find squashfs-root -type d -name "Launcher" -exec dirname {} \; 2>/dev/null | head -n1)
+    if [[ -n "$SRC_USER" && -d "$SRC_USER" ]]; then
+        cp -a "$SRC_USER"/* "$PPLUS_USER_DIR/"
+        echo "✅ Seeded User directory successfully."
+    fi
+    rm -rf squashfs-root "$TMP_EXTRACT"
 fi
 
-# Session & platform environment
+# Session and toolkit environment
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
 export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
 export ENABLE_GAMESCOPE_WSI=0
@@ -93,7 +95,6 @@ swaymsg "output ${CRT_CONNECTOR} enable mode ${OUT_W}x${OUT_H}" 2>/dev/null || t
 swaymsg "focus output ${CRT_CONNECTOR}" 2>/dev/null || true
 
 echo "🥊 Launching Project+ on ${CRT_CONNECTOR} (${MODE}: 640x480 -> ${OUT_W}x${OUT_H})..."
-echo "📂 Persisting User data to: ${PPLUS_USER_DIR}"
 
 cd "$PPLUS_DIR"
 exec gamescope \
