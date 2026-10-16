@@ -1,108 +1,14 @@
 #!/usr/bin/env bash
-# ~/.local/bin/launch-p-plus-exclusive
 set -e
 
-CRT_CONNECTOR="VGA-1"
-MODE="480i"
-REFRESH=60
-VIRTUAL_W=640
-VIRTUAL_H=480
+CRT="VGA-1"
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        -r|--resolution)
-            MODE="$2"
-            shift 2
-            ;;
-        --)
-            shift
-            break
-            ;;
-        *)
-            break
-            ;;
-    esac
-done
+# 1. Set CRT output to 480i and focus workspace
+swaymsg "output ${CRT} enable mode 2560x480" 2>/dev/null || true
+swaymsg "focus output ${CRT}" 2>/dev/null || true
 
-case "$MODE" in
-    480i)
-        OUT_W=2560; OUT_H=480
-        ;;
-    240p)
-        OUT_W=2560; OUT_H=240
-        ;;
-    *)
-        echo "❌ Unknown mode '$MODE'. Use '480i' or '240p'."
-        exit 1
-        ;;
-esac
+# 2. Always restore 240p upon exiting the emulator
+trap 'swaymsg "output '${CRT}' mode 2560x240" 2>/dev/null || true' EXIT INT TERM
 
-# Locate Project+ AppImage or binary
-PPLUS_BIN="$1"
-if [[ -z "$PPLUS_BIN" ]]; then
-    if [[ -x "$HOME/appimages/Project-Plus/Project-Plus.AppImage" ]]; then
-        PPLUS_BIN="$HOME/appimages/Project-Plus/Project-Plus.AppImage"
-    elif [[ -x "$HOME/Games/Project+/Project-Plus.AppImage" ]]; then
-        PPLUS_BIN="$HOME/Games/Project+/Project-Plus.AppImage"
-    elif [[ -x "$HOME/appimages/Project+/Project-Plus.AppImage" ]]; then
-        PPLUS_BIN="$HOME/appimages/Project+/Project-Plus.AppImage"
-    else
-        PPLUS_BIN=$(find "$HOME" -maxdepth 4 -type f -name "*Project*Plus*.AppImage" -perm -111 2>/dev/null | head -n1 || true)
-    fi
-fi
-
-if [[ -z "$PPLUS_BIN" ]]; then
-    echo "Usage: launch-p-plus-exclusive [-r 480i|240p] [/path/to/Project-Plus.AppImage]"
-    exit 1
-fi
-
-shift $(( $# > 0 ? 1 : 0 )) 2>/dev/null || true
-EXTRA_ARGS=("$@")
-PPLUS_DIR="$(dirname "$PPLUS_BIN")"
-
-# Persistent user profile directory
-PPLUS_USER_DIR="${HOME}/.config/dolphin-emu-project-plus"
-mkdir -p "$PPLUS_USER_DIR"
-
-# Auto-seed User directory from AppImage if Launcher is missing
-if [[ ! -d "${PPLUS_USER_DIR}/Launcher" ]]; then
-    echo "📦 Initializing persistent Project+ User directory from AppImage..."
-    TMP_EXTRACT=$(mktemp -d /tmp/pplus-init-XXXXXX)
-    "$PPLUS_BIN" --appimage-extract >/dev/null 2>&1 || true
-    SRC_USER=$(find squashfs-root -type d -name "Launcher" -exec dirname {} \; 2>/dev/null | head -n1)
-    if [[ -n "$SRC_USER" && -d "$SRC_USER" ]]; then
-        cp -a "$SRC_USER"/* "$PPLUS_USER_DIR/"
-        echo "✅ Seeded User directory successfully."
-    fi
-    rm -rf squashfs-root "$TMP_EXTRACT"
-fi
-
-# Session and toolkit environment
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
-export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
-export ENABLE_GAMESCOPE_WSI=0
-unset VK_ICD_FILENAMES
-
-export QT_QPA_PLATFORM=xcb
-export QT_QPA_PLATFORMTHEME=generic
-export SDL_VIDEODRIVER=x11
-
-# Restore clean 240p raster upon exit
-trap 'swaymsg "output '${CRT_CONNECTOR}' mode 2560x240" 2>/dev/null || true' EXIT INT TERM
-
-# Modeset VGA-1 in Sway and move focus
-swaymsg "output ${CRT_CONNECTOR} enable mode ${OUT_W}x${OUT_H}" 2>/dev/null || true
-swaymsg "focus output ${CRT_CONNECTOR}" 2>/dev/null || true
-
-echo "🥊 Launching Project+ on ${CRT_CONNECTOR} (${MODE}: 640x480 -> ${OUT_W}x${OUT_H})..."
-
-cd "$PPLUS_DIR"
-exec gamescope \
-  -w "$VIRTUAL_W" -h "$VIRTUAL_H" \
-  -W "$OUT_W" -H "$OUT_H" \
-  --scaler stretch \
-  --filter nearest \
-  -r "$REFRESH" \
-  --force-grab-cursor \
-  -f \
-  -- "$PPLUS_BIN" -u "$PPLUS_USER_DIR" "${EXTRA_ARGS[@]}"
+# 3. Launch Flatpak natively (Direct Wayland/X11 on Sway)
+flatpak run org.projectplusgame.project-plus-dolphin "$@"

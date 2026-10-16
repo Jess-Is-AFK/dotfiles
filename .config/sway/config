@@ -64,8 +64,8 @@ workspace 10 output VGA-1
 # ---------------------------------------------------------------------------
 # Export Wayland and desktop environment to D-Bus session activation
 exec dbus-update-activation-environment --all
-export XDG_SESSION_TYPE=wayland
-export XDG_CURRENT_DESKTOP=sway
+#export XDG_SESSION_TYPE=wayland
+#export XDG_CURRENT_DESKTOP=sway
 exec --no-startup-id /usr/libexec/xdg-desktop-portal-wlr &
 exec --no-startup-id /usr/libexec/xdg-desktop-portal &
 
@@ -202,3 +202,8 @@ bar {
         urgent_workspace   #f7768e #f7768e #ffffff
     }
 }
+
+# Route Dolphin directly to the Olympus CRT and fullscreen it
+for_window [app_id="dolphin-emu"] move container to output VGA-1, fullscreen enable
+for_window [class="dolphin-emu"] move container to output VGA-1, fullscreen enable
+for_window [app_id="org.projectplusgame.project-plus-dolphin"] move container to output VGA-1, fullscreen enable
