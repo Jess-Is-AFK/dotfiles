@@ -13,6 +13,9 @@ default_border pixel 2
 default_floating_border pixel 2
 gaps inner 5
 gaps outer 0
+output * background /home/jessica/Pictures/Wallpapers/angelic_pretty.jpg center
+
+
 
 # Tokyo Night Theme Colors
 # class                 border  backgr. text    indicator child_border
@@ -31,18 +34,26 @@ floating_modifier $mod normal
 tiling_drag enable
 tiling_drag_threshold 10
 
+seat * pointer_constraint disable
+focus_follows_mouse yes
+
+
+
+
 # ---------------------------------------------------------------------------
 # 1. Output & Display Geometry
 # ---------------------------------------------------------------------------
-# Left: Olympus OEV-203 15kHz CRT (Black background for phosphor protection)
-output VGA-1 pos 0 0 mode 2560x240@60.01Hz bg #000000 solid_color
+# --- DISPLAY TOPOLOGY ---
+# Primary & Secondary 1440p Desktops
+output DP-1 pos 0 0 res 2560x1440@144Hz enable
+output DP-2 pos 2560 0 res 2560x1440@144Hz enable
 
-# Center: Primary 1440p @ 165Hz
-output DP-2 pos 2560 0 res 2560x1440@165Hz
+# Olympus OEV-203 CRT (Under DP-1)
+# Origin (0, 1440) guarantees mode changes (320x240 <-> 640x480i) never overlap DP-2
+output VGA-1 pos 0 1440 mode 320x240@60Hz enable
 
-# Right: Secondary 1440p @ 165Hz
-output DP-3 pos 5120 0 res 2560x1440@165Hz
-
+# Prevent emulators from locking the cursor
+seat * pointer_constraint disable
 # ---------------------------------------------------------------------------
 # 2. Workspace Output Pinning
 # ---------------------------------------------------------------------------
@@ -64,11 +75,8 @@ workspace 10 output VGA-1
 # ---------------------------------------------------------------------------
 # Export Wayland and desktop environment to D-Bus session activation
 exec dbus-update-activation-environment --all
-#export XDG_SESSION_TYPE=wayland
-#export XDG_CURRENT_DESKTOP=sway
 exec --no-startup-id /usr/libexec/xdg-desktop-portal-wlr &
 exec --no-startup-id /usr/libexec/xdg-desktop-portal &
-
 
 # ---------------------------------------------------------------------------
 # 4. Primary Launchers & Keybindings
@@ -186,8 +194,8 @@ bindsym $mod+Shift+0 move container to workspace number 10
 # 9. Status Bar (Built-in Swaybar: ONLY on DP-2 and DP-3)
 # ---------------------------------------------------------------------------
 bar {
+    output DP-1
     output DP-2
-    output DP-3
     position top
 
     status_command while date +'%a %b %d  %I:%M %p'; do sleep 1; done
@@ -203,7 +211,43 @@ bar {
     }
 }
 
-# Route Dolphin directly to the Olympus CRT and fullscreen it
-for_window [app_id="dolphin-emu"] move container to output VGA-1, fullscreen enable
-for_window [class="dolphin-emu"] move container to output VGA-1, fullscreen enable
-for_window [app_id="org.projectplusgame.project-plus-dolphin"] move container to output VGA-1, fullscreen enable
+# Dedicate workspace 10 strictly to the PVM
+#workspace 10 output VGA-1
+
+# Autostart ES-DE on boot (window rules will automatically map it to VGA-1 fullscreen)
+exec ~/.local/bin/launch-es-de
+
+
+#
+# Resolution Switch
+#
+# Mode toggles for VGA-1
+bindsym $mod+Shift+F1 output VGA-1 mode 320x240
+bindsym $mod+Shift+F2 output VGA-1 mode 640x480
+
+# On-demand ES-DE launcher (runs on workspace 10 when you want couch mode)
+bindsym $mod+Shift+g exec swaymsg "workspace 1; exec ~/.local/bin/launch-es-de"
+
+
+#
+# Window Routing Rules
+#
+
+# Route CRT applications directly to VGA-1 fullscreen
+for_window [app_id="(?i).*es-de.*"] move container to output VGA-1, fullscreen enable
+for_window [class="(?i).*es-de.*"] move container to output VGA-1, fullscreen enable
+
+#for_window [app_id="(?i).*soh.*"] move container to output VGA-1, fullscreen enable
+#for_window [class="(?i).*soh.*"] move container to output VGA-1, fullscreen enable
+
+for_window [app_id="(?i).*retroarch.*"] move container to output VGA-1, fullscreen enable
+for_window [class="(?i).*retroarch.*"] move container to output VGA-1, fullscreen enable
+
+for_window [app_id="(?i).*pcsx2.*"] move container to output VGA-1, fullscreen enable
+for_window [class="(?i).*pcsx2.*"] move container to output VGA-1, fullscreen enable
+
+for_window [app_id="(?i).*dolphin.*"] move container to output VGA-1, fullscreen enable
+for_window [class="(?i).*dolphin.*"] move container to output VGA-1, fullscreen enable
+
+for_window [app_id="(?i).*gamescope.*"] move container to output VGA-1, fullscreen enable
+for_window [class="(?i).*gamescope.*"] move container to output VGA-1, fullscreen enable

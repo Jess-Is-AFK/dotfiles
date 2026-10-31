@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# launch-es-de — Native 320x240 Sway Frontend Launcher
+# ==============================================================================
+set -e
+
+CRT="VGA-1"
+TARGET_MODE="${1:-320x240}"
+
+export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+
+# Ensure CRT is in target mode and focused
+swaymsg output "${CRT}" enable mode "${TARGET_MODE}" 2>/dev/null || true
+swaymsg focus output "${CRT}" 2>/dev/null || true
+
+exec es-de "$@"

@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -e
+cd /home/jessica/appimages/soh
+# Target known SoH directory
+SOH_DIR="/home/jessica/appimages/soh"
+
+if [[ ! -d "$SOH_DIR" ]]; then
+    # Fallback search across common directories if moved
+    SOH_DIR=$(dirname "$(find "$HOME/appimages" "$HOME/Games" -name "oot.o2r" 2>/dev/null | head -n1)")
+fi
+
+if [[ -z "$SOH_DIR" || ! -d "$SOH_DIR" ]]; then
+    echo "Error: Could not locate Ship of Harkinian directory." >&2
+    exit 1
+fi
+
+# Locate the executable binary or AppImage in that folder
+SOH_BIN=$(find "$SOH_DIR" -maxdepth 1 -type f \( -iname "*soh*.appimage" -o -iname "*soh*.elf" -o -iname "soh" \) -perm -111 | head -n1)
+
+if [[ -z "$SOH_BIN" ]]; then
+    # If the binary exists but lacks execute permissions, fix and re-detect
+    SOH_RAW=$(find "$SOH_DIR" -maxdepth 1 -type f \( -iname "*soh*.appimage" -o -iname "*soh*.elf" -o -iname "soh" \) | head -n1)
+    if [[ -n "$SOH_RAW" ]]; then
+        chmod +x "$SOH_RAW"
+        SOH_BIN="$SOH_RAW"
+    else
+        echo "Error: Could not find an executable Ship of Harkinian binary in $SOH_DIR" >&2
+        exit 1
+    fi
+fi
+
+# Critical: Change to SoH directory so it loads oot.o2r and game config
+cd "$SOH_DIR"
+
+# Allow couch gamepad navigation even when other windows have focus
+export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+
+# Focus CRT output in Sway
+swaymsg "focus output VGA-1" 2>/dev/null || true
+
+exec "$SOH_BIN" "$@"

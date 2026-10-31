@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# launch-steam-bpm — Flatpak Steam Big Picture Mode on 15kHz CRT
+# ==============================================================================
+set -e
+
+CRT="VGA-1"
+TARGET_MODE="640x480"     # 480i for Steam Gamepad UI
+RESTORE_MODE="320x240"    # 240p progressive for ES-DE
+
+# OpenRC session hygiene & background controller navigation
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+
+# Always restore 240p progressive when Steam exits
+trap 'swaymsg output "${CRT}" mode "${RESTORE_MODE}" 2>/dev/null || true' EXIT INT TERM
+
+# 1. Switch CRT to 480i and focus
+swaymsg output "${CRT}" enable mode "${TARGET_MODE}" 2>/dev/null || true
+swaymsg focus output "${CRT}" 2>/dev/null || true
+
+# 2. Launch Flatpak Steam inside 4:3 Gamescope sandbox
+# Virtual canvas: 960x720 (4:3) -> Scaled to 640x480 (4:3) on VGA-1
+exec gamescope \
+  -w 960 -h 720 \
+  -W 640 -H 480 \
+  -r 60 \
+  --scaler stretch \
+  --filter linear \
+  -f \
+  -- flatpak run com.valvesoftware.Steam -gamepadui -steamos "$@"

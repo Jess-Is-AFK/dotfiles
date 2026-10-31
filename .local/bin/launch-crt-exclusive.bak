@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+set -e
+
+MODE="240p"
+CMD=()
+CRT_CONNECTOR="VGA-1"
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -r|--resolution) MODE="$2"; shift 2 ;;
+        -o|--) shift; CMD=("$@"); break ;;
+        *) CMD+=("$1"); shift ;;
+    esac
+done
+
+case "$MODE" in
+    240p) swaymsg "output ${CRT_CONNECTOR} mode 2560x240" ;;
+    224p) swaymsg "output ${CRT_CONNECTOR} mode 2560x224" ;;
+    288p) swaymsg "output ${CRT_CONNECTOR} mode 2560x288" ;;
+    480i)
+        trap 'swaymsg "output '${CRT_CONNECTOR}' mode 2560x240"' EXIT INT TERM
+        swaymsg "output ${CRT_CONNECTOR} mode 2560x480"
+        swaymsg "focus output ${CRT_CONNECTOR}"
+        ;;
+esac
+
+swaymsg "focus output ${CRT_CONNECTOR}"
+exec "${CMD[@]}"

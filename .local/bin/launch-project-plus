@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# launch-project-plus — Native 15kHz 480i Sway Launcher (No Gamescope)
+# ==============================================================================
+set -e
+
+CRT="VGA-1"
+TARGET_MODE="640x480"     # Native 480i default for Wii / P+
+RESTORE_MODE="320x240"    # Revert to progressive scanlines on exit
+
+# Parse optional resolution override (-r 240p or -r 480i)
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -r|--resolution)
+            case "$2" in
+                240p) TARGET_MODE="320x240" ;;
+                480i) TARGET_MODE="640x480" ;;
+                *)    TARGET_MODE="$2" ;;
+            esac
+            shift 2
+            ;;
+        --)
+            shift
+            break
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+# Allow background controller input while primary 1440p desktop is in use
+export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+
+# Use internal Qt dialogs rather than tripping desktop portals
+export QT_NO_PORTAL=1
+
+# Restore default CRT mode automatically upon exit or interrupt
+trap 'swaymsg "output '${CRT}' mode '${RESTORE_MODE}'" 2>/dev/null || true' EXIT INT TERM
+
+# 1. Switch CRT to target mode and focus output
+swaymsg "output ${CRT} enable mode ${TARGET_MODE}" 2>/dev/null || true
+swaymsg "focus output ${CRT}" 2>/dev/null || true
+
+# 2. Resolve runner (Dedicated Flatpak -> Standard Dolphin Flatpak -> AppImage)
+RUN_CMD=()
+if command -v flatpak &>/dev/null; then
+    FLATPAK_ID=$(flatpak list --app --columns=application 2>/dev/null | grep -iE "project.*plus|projectplus" | head -n1 || true)
+    if [[ -z "$FLATPAK_ID" ]]; then
+        FLATPAK_ID=$(flatpak list --app --columns=application 2>/dev/null | grep -iE "org\.DolphinEmu\.dolphin-emu" | head -n1 || true)
+    fi
+    if [[ -n "$FLATPAK_ID" ]]; then
+        RUN_CMD=(flatpak run "$FLATPAK_ID")
+    fi
+fi
+
+if [ ${#RUN_CMD[@]} -eq 0 ]; then
+    PPLUS_BIN=$(find "$HOME/appimages" "$HOME/Games" -maxdepth 3 -type f -name "*Project*Plus*.AppImage" -perm -111 2>/dev/null | head -n1 || true)
+    if [[ -n "$PPLUS_BIN" && -x "$PPLUS_BIN" ]]; then
+        RUN_CMD=("$PPLUS_BIN")
+    elif command -v dolphin-emu &>/dev/null; then
+        RUN_CMD=("$(command -v dolphin-emu)")
+    else
+        echo "❌ Error: Could not locate Project+ Flatpak, AppImage, or dolphin-emu binary." >&2
+        exit 1
+    fi
+fi
+
+echo "🥊 Launching Project+ on ${CRT} (${TARGET_MODE})..."
+echo "🎯 Runner: ${RUN_CMD[*]}"
+
+exec "${RUN_CMD[@]}" "$@"

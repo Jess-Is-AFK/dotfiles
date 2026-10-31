@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# launch-ps2 — Native 15kHz 480i PCSX2 Launcher for Sway (No Gamescope)
+# ==============================================================================
+set -e
+
+CRT="VGA-1"
+TARGET_MODE="640x480"     # Native 480i interlaced
+RESTORE_MODE="320x240"    # Native 240p progressive
+
+# OpenRC session bus and desktop hygiene
+export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+export QT_NO_PORTAL=1
+
+# Always restore 240p raster upon exit (with explicit spaces)
+trap 'swaymsg output "${CRT}" mode "${RESTORE_MODE}" 2>/dev/null || true' EXIT INT TERM
+
+# 1. Switch CRT to native 480i and focus output
+swaymsg output "${CRT}" enable mode "${TARGET_MODE}" 2>/dev/null || true
+swaymsg focus output "${CRT}" 2>/dev/null || true
+
+# 2. Build Flatpak execution command
+CMD=("flatpak" "run" "--env=QT_NO_PORTAL=1" "net.pcsx2.PCSX2")
+
+ROM="$1"
+if [[ -n "$ROM" && -f "$ROM" ]]; then
+    CMD+=("-fullscreen" "-batch" "$ROM")
+else
+    CMD+=("-fullscreen")
+fi
+
+echo "🎮 Launching PCSX2 on ${CRT} (${TARGET_MODE})..."
+exec "${CMD[@]}"

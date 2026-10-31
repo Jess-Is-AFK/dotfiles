@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# crt-run — Dynamic Pre/Post Mode Switcher for Sway
+# Usage: crt-run <target_mode> <command> [args...]
+# ==============================================================================
+set -e
+
+CRT="VGA-1"
+DEFAULT_MODE="320x240"
+TARGET_MODE="$1"
+shift
+
+export SDL_JOYSTICK_ALLOW_BACKGROUND_EVENTS=1
+
+# Always restore default resolution when the game exits
+trap 'swaymsg output "${CRT}" mode "${DEFAULT_MODE}" 2>/dev/null || true' EXIT INT TERM
+
+# Switch CRT to target mode and route focus
+swaymsg output "${CRT}" enable mode "${TARGET_MODE}" 2>/dev/null || true
+swaymsg focus output "${CRT}" 2>/dev/null || true
+
+exec "$@"

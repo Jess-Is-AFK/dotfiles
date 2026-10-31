@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# ==============================================================================
+# crt-audio — Audio Router for ALC897 (Couch Exclusive vs Desktop)
+# Usage: crt-audio [crt|desktop|both|toggle]
+# ==============================================================================
+set -e
+
+CARD="Generic"
+TARGET="${1:-toggle}"
+
+case "$TARGET" in
+    desktop|both)
+        # Desktop baseline: Unmute both front and rear outputs
+        amixer -c "$CARD" set "Auto-Mute Mode" "Disabled" >/dev/null 2>&1 || true
+        amixer -c "$CARD" set "Master" 100% unmute >/dev/null 2>&1
+        amixer -c "$CARD" set "Front" 100% unmute >/dev/null 2>&1
+        amixer -c "$CARD" set "Headphone" 100% unmute >/dev/null 2>&1
+        echo "🎧 Desktop mode active (Desktop speakers unmuted)"
+        ;;
+    crt)
+        # Couch exclusive: Mute front desktop speakers; PVM plays exclusively
+        amixer -c "$CARD" set "Auto-Mute Mode" "Disabled" >/dev/null 2>&1 || true
+        amixer -c "$CARD" set "Master" 100% unmute >/dev/null 2>&1
+        amixer -c "$CARD" set "Front" 100% unmute >/dev/null 2>&1
+        amixer -c "$CARD" set "Headphone" mute >/dev/null 2>&1
+        echo "📺 CRT Exclusive active (Desktop speakers muted)"
+        ;;
+    toggle)
+        if amixer -c "$CARD" get "Headphone" | grep -q "\[off\]"; then
+            ~/.local/bin/crt-audio desktop
+        else
+            ~/.local/bin/crt-audio crt
+        fi
+        ;;
+    *)
+        echo "Usage: crt-audio [crt|desktop|both|toggle]"
+        exit 1
+        ;;
+esac
