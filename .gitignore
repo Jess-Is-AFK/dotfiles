@@ -5,3 +5,11 @@ appimages/*.AppImage
 *.chd
 *.bin
 !kernel/edid/crt_15khz_multi.bin
+# Game engine and emulator runtime dumps
+*.o2r
+*.otr
+*.ini
+*.json
+Save/
+logs/
+mods/
