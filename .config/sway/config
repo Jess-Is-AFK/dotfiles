@@ -191,25 +191,10 @@ bindsym $mod+Shift+9 move container to workspace number 9
 bindsym $mod+Shift+0 move container to workspace number 10
 
 # ---------------------------------------------------------------------------
-# 9. Status Bar (Built-in Swaybar: ONLY on DP-2 and DP-3)
+# 9. Status Bar (Waybar - ONLY on DP-2 and DP-3)
 # ---------------------------------------------------------------------------
-bar {
-    output DP-1
-    output DP-2
-    position top
 
-    status_command while date +'%a %b %d  %I:%M %p'; do sleep 1; done
-
-    colors {
-        statusline #c0caf5
-        background #1a1b26
-        separator  #565f89
-        focused_workspace  #7aa2f7 #7aa2f7 #1a1b26
-        active_workspace   #24283b #24283b #c0caf5
-        inactive_workspace #1a1b26 #1a1b26 #565f89
-        urgent_workspace   #f7768e #f7768e #ffffff
-    }
-}
+exec_always waybar
 
 # Dedicate workspace 10 strictly to the PVM
 #workspace 10 output VGA-1
